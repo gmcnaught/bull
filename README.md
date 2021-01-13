@@ -17,8 +17,7 @@
     <a href="#quick-guide"><strong>Quick Guide</strong></a> ·
     <a href="#documentation"><strong>Documentation</strong></a>
   </p>
-  <br/>
-  <br/>
+  <p>Check the new <a href="https://optimalbits.github.io/bull/"><strong>Guide!</strong></p>
   <br/>
   <p>
     <a href="https://gitter.im/OptimalBits/bull">
@@ -48,25 +47,19 @@
   </p>
 </div>
 
+---
+
+### BullMQ 4 Beta
+
+If you want to start using the next major version of Bull you are welcome to the new repo [here](https://github.com/taskforcesh/bullmq)
 
 ---
 
 ### Sponsors
 
-<div valign="middle">
-  <a href="http://mixmax.com">
-    <img src="https://mixmax.com/images/logo_confirmation.png" alt="Mixmax, Inc" width="85" />
-  </a>
-  <a href="http://optimalbits.com">
-    <img src="http://optimalbits.com/images/logo.png" />
-  </a>
-  <a href="http://taskforce.sh"  style="margin-left: 50px;">
-    <img src="http://taskforce.sh/assets/logo_square.png" width="160" alt="Taskforce.sh, Inc" />
-  </a>
-</div>
+If you find Bull valuable, please consider sponsoring its development by using the Taskforce front-end &nbsp; [<img src="http://taskforce.sh/assets/logo_square.png" width="100" alt="Taskforce.sh, Inc" style="padding: 100px"/>](https://taskforce.sh). 
 
-Are you developing bull sponsored by a company? Please, let us now!
-
+Besides helping Bull's development, you will also benefit from a constantly-improving UI for managing all of your queues and jobs.
 
 ---
 
@@ -98,8 +91,10 @@ There are a few third-party UIs that you can use for monitoring:
 
 **Bull v3**
 
-- [NEW (Preview) Taskforce](https://taskforce.sh)
+- [Taskforce](https://taskforce.sh)
 - [Arena](https://github.com/mixmaxhq/arena)
+- [bull-repl](https://github.com/darky/bull-repl)
+- [bull-board](https://github.com/vcapretz/bull-board)
 
 **Bull <= v2**
 
@@ -109,10 +104,15 @@ There are a few third-party UIs that you can use for monitoring:
 
 ---
 
+### Monitoring & Alerting
+
+- With Prometheus [Bull Queue Exporter](https://github.com/UpHabit/bull_exporter)
+
+---
+
 ### Feature Comparison
 
-Since there are a few job queue solutions, here a table comparing them to help you use the one that
-better suits your needs.
+Since there are a few job queue solutions, here is a table comparing them:
 
 | Feature         | Bull          | Kue   | Bee | Agenda |
 | :-------------  |:-------------:|:-----:|:---:|:------:|
@@ -155,6 +155,14 @@ yarn add --dev @types/bull
 ```
 
 Definitions are currently maintained in the [DefinitelyTyped](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/bull) repo.
+
+
+## Contributing
+
+We welcome all types of contributions, either code fixes, new features or doc improvements.
+Code formatting is enforced by [prettier](https://prettier.io/)
+For commits please follow conventional [commits convention](https://www.conventionalcommits.org/en/v1.0.0-beta.2/)
+All code must pass lint rules and test suites before it can be merged into develop.
 
 ---
 
@@ -301,7 +309,7 @@ A job can be added to a queue and processed repeatedly according to a cron speci
 
 ```
 
-As a tip, check your expressions here to verify they are as you expect them:
+As a tip, check your expressions here to verify they are correct:
 [cron expression descriptor](http://cronexpressiondescriptor.azurewebsites.net/)
 
 #### Pause / Resume
@@ -320,7 +328,7 @@ queue.resume().then(function(){
 
 #### Events
 
-A queue emits also some useful events, for example...
+A queue emits some useful events, for example...
 ```js
 .on('completed', function(job, result){
   // Job completed with output result!
@@ -329,7 +337,7 @@ A queue emits also some useful events, for example...
 
 For more information on events, including the full list of events that are fired, check out the [Events reference](./REFERENCE.md#events)
 
-#### Queues performace
+#### Queues performance
 
 Queues are cheap, so if you need many of them just create new ones with different
 names:
@@ -388,7 +396,8 @@ if(cluster.isMaster){
 
 For the full documentation, check out the reference and common patterns:
 
-- [Reference](./REFERENCE.md) — the full reference material for Bull.
+- [Guide](https://optimalbits.github.io/bull/) — Your starting point for developing with Bull.
+- [Reference](./REFERENCE.md) — Reference document with all objects and methods available.
 - [Patterns](./PATTERNS.md) — a set of examples for common patterns.
 - [License](./LICENSE.md) — the Bull license—it's MIT.
 
@@ -400,7 +409,7 @@ If you see anything that could use more docs, please submit a pull request!
 
 ### Important Notes
 
-The queue aims for "at least once" working strategy. It means that in some situations a job
+The queue aims for an "at least once" working strategy. This means that in some situations, a job
 could be processed more than once. This mostly happens when a worker fails to keep a lock
 for a given job during the total duration of the processing.
 

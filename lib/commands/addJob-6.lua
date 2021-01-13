@@ -12,7 +12,7 @@
          - LIFO
          - FIFO
          - prioritized.
-         - Adds the job to the "added" list so that workers gets notified.
+      - Adds the job to the "added" list so that workers gets notified.
 
     Input:
       KEYS[1] 'wait',
@@ -52,7 +52,7 @@ else
 end
 
 -- Store the job.
-rcall("HMSET", jobIdKey, "name", ARGV[3], "data", ARGV[4], "opts", ARGV[5], "timestamp", ARGV[6], "delay", ARGV[7])
+rcall("HMSET", jobIdKey, "name", ARGV[3], "data", ARGV[4], "opts", ARGV[5], "timestamp", ARGV[6], "delay", ARGV[7], "priority", ARGV[9])
 
 -- Check if job is delayed
 local delayedTimestamp = tonumber(ARGV[8])

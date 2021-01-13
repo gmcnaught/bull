@@ -10,6 +10,7 @@ Here are a few examples of useful patterns that are often implemented with Bull:
 - [Redis Cluster](#redis-cluster)
 - [Debugging](#debugging)
 - [Custom backoff strategy](#custom-backoff-strategy)
+- [Manually fetching jobs](#manually-fetching-jobs)
 
 If you have any other common patterns you want to add, pull request them!
 
@@ -18,8 +19,8 @@ Message Queue
 -------------
 
 Bull can also be used for persistent message queues. This is a quite useful
-feature in some usecases. For example, you can have two servers that need to
-communicate with each other. By using a queue the servers do not need to be online at the same time, this creates a very robust communication channel. You can treat `add` as *send* and `process` as *receive*:
+feature in some use cases. For example, you can have two servers that need to
+communicate with each other. By using a queue the servers do not need to be online at the same time, so this creates a very robust communication channel. You can treat `add` as *send* and `process` as *receive*:
 
 Server A:
 
@@ -59,7 +60,7 @@ Returning Job Completions
 
 A common pattern is where you have a cluster of queue processors that just process jobs as fast as they can, and some other services that need to take the result of this processors and do something with it, maybe storing results in a database.
 
-The most robust and scalable way to accomplish this is by combining the standard job queue with the message queue pattern: a service sends jobs to the cluster just by opening a job queue and adding jobs to it, the cluster will start processing as fast as it can. Everytime a job gets completed in the cluster a message is send to a results message queue with the result data, this queue is listened by some other service that stores the results in a database.
+The most robust and scalable way to accomplish this is by combining the standard job queue with the message queue pattern: a service sends jobs to the cluster just by opening a job queue and adding jobs to it, and the cluster will start processing as fast as it can. Everytime a job gets completed in the cluster a message is sent to a results message queue with the result data, and this queue is listened by some other service that stores the results in a database.
 
 
 Reusing Redis Connections
@@ -82,7 +83,7 @@ var opts = {
       case 'subscriber':
         return subscriber;
       default:
-        return new Redis();
+        return new Redis(REDIS_URL);
     }
   }
 }
@@ -94,15 +95,15 @@ var queueQux = new Queue('quxbaz', opts);
 Redis cluster
 -------------
 
-Bull internals requires atomic operations that spans different keys. This fact breaks redis
-rules for cluster configurations, however it is still possible to use a cluster environment
+Bull internals requires atomic operations that spans different keys. This fact breaks Redis'
+rules for cluster configurations. However it is still possible to use a cluster environment
 by using the proper bull prefix option as a cluster "hash tag". Hash tags are used to guarantee
 that certain keys are placed in the same hash slot, read more about hash tags in the [redis cluster
 tutorial](https://redis.io/topics/cluster-tutorial).
 
-A hash tag is defined with brakets. I.e. a key that has a substring inside brackets will use that
+A hash tag is defined with brackets. I.e. a key that has a substring inside brackets will use that
 substring to determine in which hash slot the key will be placed. So to make bull compatible with
-cluster, just use a queue prefix inside brackes, for example:
+cluster, just use a queue prefix inside brackets, for example:
 
 ```js
   var queue = new Queue('cluster', {
@@ -129,7 +130,8 @@ NODE_DEBUG=bull node ./your-script.js
 Custom backoff strategy
 -----------------------
 
-When the builtin backoff strategies on retries are not sufficient, a custom strategy can be defined. Custom backoff strategies are defined by a function on the queue:
+When the builtin backoff strategies on retries are not sufficient, a custom strategy can be defined. Custom backoff strategies are defined by a function on the queue. The number of attempts already made to process the job is passed to this function as the first parameter, and the error that the job failed with as the second parameter.
+The function returns either the time to delay the retry with, 0 to retry immediately or -1 to fail the job immediately.
 
 ```js
 var Queue = require('bull');
@@ -137,7 +139,7 @@ var Queue = require('bull');
 var myQueue = new Queue("Server B", {
   settings: {
     backoffStrategies: {
-      jitter: function () {
+      jitter: function (attemptsMade, err) {
         return 5000 + Math.random() * 500;
       }
     }
@@ -156,4 +158,100 @@ myQueue.add({foo: 'bar'}, {
 });
 ```
 
+You may base your backoff strategy on the error that the job throws:
+```js
+var Queue = require('bull');
 
+function MySpecificError() {}
+
+var myQueue = new Queue('Server C', {
+  settings: {
+    backoffStrategies: {
+      foo: function (attemptsMade, err) {
+        if (err instanceof MySpecificError) {
+          return 10000;
+        }
+        return 1000;
+      }
+    }
+  }
+});
+
+myQueue.process(function(job, done){
+  if (job.data.msg === 'Specific Error') {
+    throw new MySpecificError();
+  } else {
+    throw new Error();
+  }
+});
+
+myQueue.add({msg: 'Hello'}, {
+  attempts: 3,
+  backoff: {
+    type: 'foo'
+  }
+});
+
+myQueue.add({msg: 'Specific Error'}, {
+ attempts: 3,
+ backoff: {
+   type: 'foo'
+ }
+});
+```
+
+Manually fetching jobs
+----------------------------------
+
+If you want the actual job processing to be done in a seperate repo/service than where `bull` is running, this pattern may be for you.
+
+Manually transitioning states for jobs can be done with a few simple methods.
+
+1. Adding a job to the 'waiting' queue. Grab the queue and call `add`.
+
+```typescript
+import Queue from "bull";
+
+const queue = new Queue({
+  limiter: {
+    max: 5,
+    duration: 5000,
+    bounceBack: true // important
+  },
+  ...queueOptions
+});
+queue.add({ random_attr: "random_value" });
+```
+
+2. Pulling a job from 'waiting' and moving it to 'active'.
+
+```typescript
+const job: Job = await queue.getNextJob();
+```
+
+3. Move the job to the 'failed' queue if something goes wrong.
+
+```typescript
+const (nextJobData, nextJobId) = await job.moveToFailed(
+  {
+    message: "Call to external service failed!",
+  },
+  true,
+);
+```
+
+3. Move the job to the 'completed' queue.
+
+```typescript
+const (nextJobData, nextJobId) = await job.moveToCompleted("succeeded", true);
+```
+
+4. Return the next job if one is returned.
+
+```typescript
+if (nextJobdata) {
+  return Job.fromJSON(queue, nextJobData, nextJobId);
+}
+```
+
+Then you can easily wrap `bull` in an API for use with external systems.
